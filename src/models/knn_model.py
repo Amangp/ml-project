@@ -3,24 +3,35 @@ def run_knn():
     import pandas as pd
     from sklearn.model_selection import train_test_split
     from sklearn.neighbors import KNeighborsClassifier
-    from sklearn.metrics import classification_report, accuracy_score
+    from sklearn.metrics import classification_report, confusion_matrix
     from sklearn.preprocessing import StandardScaler
-
+    from imblearn.over_sampling import SMOTE
     print("\n===== KNN =====")
 
     #  Load data
     df = pd.read_csv("Data/labeled_data.csv")
+    df["value_ratio"] = df["Net Value"] / (df["Total Value"] + 1)
+    df["fee_to_value"] = df["TxnFee(ETH)"] / (df["Total Value"] + 1)
+    df["is_high_fee"] = (df["Fee Ratio"] > df["Fee Ratio"].mean()).astype(int)
 
     features = [
         "Total Value_z",
         "Net Value_z",
         "Fee Ratio_z",
         "Time Gap_z",
-        "Block Gap_z"
+        "Block Gap_z",
+        "value_ratio",
+        "fee_to_value",
+        "is_high_fee"
     ]
 
-    X = df[features]
+    X = df[features].fillna(0)
     y = df["label"]
+    
+    scaler = StandardScaler()
+
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
 
     #  Train-test split (with stratification)
     X_train, X_test, y_train, y_test = train_test_split(
@@ -29,22 +40,19 @@ def run_knn():
         random_state=42,
         stratify=y
     )
-
-    #  Scaling (MANDATORY for KNN)
-    scaler = StandardScaler()
-    X_train = scaler.fit_transform(X_train)
-    X_test = scaler.transform(X_test)
-
-    #  Model (slightly tuned)
-    model = KNeighborsClassifier(n_neighbors=7) 
+    
+    smote = SMOTE(random_state=42)
+    X_train, y_train = smote.fit_resample(X_train, y_train)
+    #  Model
+    model = KNeighborsClassifier(n_neighbors=3, weights='distance') 
     model.fit(X_train, y_train)
 
     # Predictions
     preds = model.predict(X_test)
 
     # Evaluation
+    print(confusion_matrix(y_test, preds))
     print(classification_report(y_test, preds))
-    print("Accuracy:", round(accuracy_score(y_test, preds), 4))
 
 
 if __name__ == "__main__":
