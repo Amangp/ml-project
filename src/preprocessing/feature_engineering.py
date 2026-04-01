@@ -10,7 +10,7 @@ df ["Net Value"]= df["Value_IN(ETH)"]- df["Value_OUT(ETH)"]
 
 epsilon = 1e-9            # we took this so that we caan prevent the division from 0
 
-df["Fee Ratio"] = df["TxnFee(ETH)"]+ (df ["Total Value"]+epsilon)
+df["Fee Ratio"] = df["TxnFee(ETH)"] / (df["Total Value"] + epsilon)
 
 df= df.sort_values("UnixTimestamp")
 df["Time Gap"]=df["UnixTimestamp"].diff().fillna(0)
