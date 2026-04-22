@@ -1,1137 +1,1279 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EtherGuard — Ethereum Fraud Detection</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg: #0a0e1a;
-    --bg2: #111827;
-    --bg3: #1a2235;
-    --card: #141c2e;
-    --border: rgba(99,179,237,0.15);
-    --border2: rgba(99,179,237,0.3);
-    --accent: #63b3ed;
-    --accent2: #4fd1c5;
-    --danger: #fc8181;
-    --danger-bg: rgba(252,129,129,0.1);
-    --safe: #68d391;
-    --safe-bg: rgba(104,211,145,0.1);
-    --warn: #f6ad55;
-    --warn-bg: rgba(246,173,85,0.1);
-    --text: #e2e8f0;
-    --text2: #94a3b8;
-    --text3: #64748b;
-    --mono: 'Space Mono', monospace;
-    --sans: 'DM Sans', sans-serif;
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--sans);
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
-
-  /* Grid background */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image:
-      linear-gradient(rgba(99,179,237,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(99,179,237,0.03) 1px, transparent 1px);
-    background-size: 40px 40px;
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  .app { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
-
-  /* Header */
-  header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 2.5rem;
-    padding-bottom: 1.5rem;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .logo {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .logo-icon {
-    width: 38px; height: 38px;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px;
-  }
-
-  .logo-text {
-    font-family: var(--mono);
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: var(--text);
-    letter-spacing: -0.5px;
-  }
-
-  .logo-text span { color: var(--accent); }
-
-  .header-badge {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--accent2);
-    background: rgba(79,209,197,0.1);
-    border: 1px solid rgba(79,209,197,0.2);
-    padding: 4px 10px;
-    border-radius: 20px;
-    letter-spacing: 1px;
-  }
-
-  /* Pipeline legend */
-  .pipeline {
-    display: flex;
-    align-items: center;
-    gap: 0;
-    margin-bottom: 2rem;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 1rem 1.5rem;
-    overflow-x: auto;
-  }
-
-  .pipe-step {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
-  }
-
-  .pipe-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--accent);
-    flex-shrink: 0;
-  }
-
-  .pipe-dot.dim { background: var(--text3); }
-
-  .pipe-label {
-    font-size: 12px;
-    font-family: var(--mono);
-    color: var(--text2);
-    white-space: nowrap;
-  }
-
-  .pipe-label.active { color: var(--accent); }
-
-  .pipe-arrow {
-    font-size: 11px;
-    color: var(--text3);
-    margin: 0 10px;
-    flex-shrink: 0;
-  }
-
-  /* Main grid */
-  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
-
-  @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
-
-  /* Cards */
-  .card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 1.5rem;
-  }
-
-  .card-title {
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 2px;
-    color: var(--text3);
-    text-transform: uppercase;
-    margin-bottom: 1.2rem;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .card-title::before {
-    content: '';
-    display: block;
-    width: 3px; height: 12px;
-    background: var(--accent);
-    border-radius: 2px;
-  }
-
-  /* Input groups */
-  .input-group { margin-bottom: 1rem; }
-
-  .input-label {
-    display: block;
-    font-size: 12px;
-    color: var(--text3);
-    font-family: var(--mono);
-    margin-bottom: 6px;
-    letter-spacing: 0.5px;
-  }
-
-  .input-wrap {
-    position: relative;
-    display: flex;
-    align-items: center;
-  }
-
-  .input-prefix {
-    position: absolute;
-    left: 12px;
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--accent);
-    pointer-events: none;
-  }
-
-  input[type="number"] {
-    width: 100%;
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--text);
-    font-family: var(--mono);
-    font-size: 13px;
-    padding: 9px 12px 9px 36px;
-    outline: none;
-    transition: border-color 0.2s;
-    -moz-appearance: textfield;
-  }
-
-  input[type="number"]::-webkit-outer-spin-button,
-  input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
-
-  input[type="number"]:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(99,179,237,0.1);
-  }
-
-  .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
-
-  /* Analyze button */
-  .analyze-btn {
-    width: 100%;
-    margin-top: 0.5rem;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    border: none;
-    border-radius: 10px;
-    color: #0a0e1a;
-    font-family: var(--mono);
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    padding: 13px;
-    cursor: pointer;
-    transition: opacity 0.2s, transform 0.1s;
-  }
-
-  .analyze-btn:hover { opacity: 0.9; }
-  .analyze-btn:active { transform: scale(0.99); }
-
-  /* Risk meter */
-  .risk-section { margin-bottom: 1.5rem; }
-
-  .risk-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 8px;
-  }
-
-  .risk-label { font-size: 12px; color: var(--text3); font-family: var(--mono); }
-
-  .risk-value {
-    font-family: var(--mono);
-    font-size: 2rem;
-    font-weight: 700;
-    transition: color 0.4s;
-  }
-
-  .risk-bar-bg {
-    height: 8px;
-    background: var(--bg2);
-    border-radius: 4px;
-    overflow: hidden;
-    margin-bottom: 4px;
-  }
-
-  .risk-bar-fill {
-    height: 100%;
-    border-radius: 4px;
-    transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.4s;
-    width: 0%;
-  }
-
-  .risk-ticks {
-    display: flex;
-    justify-content: space-between;
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--text3);
-    margin-top: 3px;
-  }
-
-  /* Verdict banner */
-  .verdict {
-    padding: 12px 16px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 1.5rem;
-    transition: all 0.4s;
-    background: var(--bg2);
-    border: 1px solid var(--border);
-  }
-
-  .verdict-icon {
-    font-size: 22px;
-    flex-shrink: 0;
-  }
-
-  .verdict-text strong {
-    display: block;
-    font-size: 14px;
-    font-family: var(--mono);
-    margin-bottom: 2px;
-  }
-
-  .verdict-text span {
-    font-size: 12px;
-    color: var(--text2);
-  }
-
-  /* Model votes */
-  .models-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 1.5rem; }
-
-  .model-card {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 10px 12px;
-    text-align: center;
-    transition: all 0.3s;
-  }
-
-  .model-name {
-    font-size: 10px;
-    font-family: var(--mono);
-    color: var(--text3);
-    letter-spacing: 0.5px;
-    margin-bottom: 4px;
-  }
-
-  .model-verdict {
-    font-size: 12px;
-    font-family: var(--mono);
-    font-weight: 700;
-  }
-
-  .model-prob {
-    font-size: 11px;
-    color: var(--text2);
-    margin-top: 2px;
-  }
-
-  /* Z-score bars */
-  .zscore-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 10px;
-  }
-
-  .zscore-label {
-    font-size: 11px;
-    font-family: var(--mono);
-    color: var(--text2);
-    width: 90px;
-    flex-shrink: 0;
-  }
-
-  .zscore-bar-wrap {
-    flex: 1;
-    height: 20px;
-    background: var(--bg2);
-    border-radius: 4px;
-    overflow: hidden;
-    position: relative;
-  }
-
-  .zscore-center {
-    position: absolute;
-    left: 50%; top: 0; bottom: 0;
-    width: 1px;
-    background: var(--border2);
-  }
-
-  .zscore-fill {
-    position: absolute;
-    top: 3px; bottom: 3px;
-    border-radius: 3px;
-    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
-
-  .zscore-val {
-    font-size: 11px;
-    font-family: var(--mono);
-    width: 52px;
-    text-align: right;
-    flex-shrink: 0;
-  }
-
-  /* Alert badges */
-  .alert-badge {
-    font-size: 9px;
-    font-family: var(--mono);
-    padding: 2px 6px;
-    border-radius: 4px;
-    margin-left: 4px;
-    vertical-align: middle;
-  }
-
-  /* Score breakdown */
-  .score-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 8px;
-    margin-bottom: 1rem;
-  }
-
-  .score-chip {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px;
-    text-align: center;
-  }
-
-  .score-chip-label {
-    font-size: 10px;
-    font-family: var(--mono);
-    color: var(--text3);
-    margin-bottom: 4px;
-  }
-
-  .score-chip-val {
-    font-size: 16px;
-    font-family: var(--mono);
-    font-weight: 700;
-    color: var(--accent);
-  }
-
-  /* Empty state */
-  .empty-state {
-    text-align: center;
-    padding: 2.5rem 1rem;
-    color: var(--text3);
-  }
-
-  .empty-icon {
-    font-size: 2.5rem;
-    margin-bottom: 0.5rem;
-    opacity: 0.4;
-  }
-
-  .empty-text {
-    font-size: 13px;
-    font-family: var(--mono);
-  }
-
-  /* Right panel */
-  .right-panel { display: flex; flex-direction: column; gap: 1.5rem; }
-
-  /* Tabs */
-  .tab-bar {
-    display: flex;
-    gap: 4px;
-    background: var(--bg2);
-    border-radius: 8px;
-    padding: 4px;
-    margin-bottom: 1rem;
-  }
-
-  .tab-btn {
-    flex: 1;
-    background: none;
-    border: none;
-    border-radius: 6px;
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--text3);
-    padding: 6px 4px;
-    cursor: pointer;
-    transition: all 0.2s;
-    letter-spacing: 0.5px;
-  }
-
-  .tab-btn.active {
-    background: var(--card);
-    color: var(--accent);
-    border: 1px solid var(--border);
-  }
-
-  .tab-panel { display: none; }
-  .tab-panel.active { display: block; }
-
-  /* Preset buttons */
-  .presets {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 6px;
-    margin-bottom: 1rem;
-  }
-
-  .preset-btn {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--text2);
-    font-family: var(--mono);
-    font-size: 11px;
-    padding: 8px 10px;
-    cursor: pointer;
-    text-align: left;
-    transition: all 0.2s;
-  }
-
-  .preset-btn:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-  }
-
-  .preset-btn .preset-tag {
-    display: block;
-    font-size: 9px;
-    color: var(--text3);
-    margin-top: 2px;
-    letter-spacing: 0.5px;
-  }
-
-  /* Animation */
-  @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:0.5 } }
-  .analyzing { animation: pulse 1s ease-in-out infinite; }
-
-  @keyframes fadeIn { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform: none; } }
-  .fade-in { animation: fadeIn 0.35s ease forwards; }
-
-  /* About section */
-  .about-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    font-size: 11px;
-    font-family: var(--mono);
-    color: var(--text3);
-    padding: 5px 12px;
-    margin-right: 6px;
-    margin-bottom: 6px;
-  }
-
-  .about-pill-dot {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: var(--accent2);
-  }
-
-  footer {
-    margin-top: 2.5rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid var(--border);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-
-  footer p {
-    font-size: 11px;
-    font-family: var(--mono);
-    color: var(--text3);
-  }
-
-  .accuracy-badge {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-
-  .acc-chip {
-    font-size: 11px;
-    font-family: var(--mono);
-    color: var(--accent2);
-    background: rgba(79,209,197,0.08);
-    border: 1px solid rgba(79,209,197,0.15);
-    padding: 3px 8px;
-    border-radius: 4px;
-  }
-</style>
-</head>
-<body>
-<div class="app">
-
-  <header>
-    <div class="logo">
-      <div class="logo-icon">⬡</div>
-      <div>
-        <div class="logo-text">Ether<span>Guard</span></div>
-        <div style="font-size:11px;color:var(--text3);font-family:var(--mono);letter-spacing:0.5px;">Fraud Detection System</div>
-      </div>
-    </div>
-    <div class="header-badge">MF-UFS PIPELINE</div>
-  </header>
-
-  <!-- Pipeline legend -->
-  <div class="pipeline">
-    <div class="pipe-step">
-      <div class="pipe-dot"></div>
-      <div class="pipe-label active">Feature Engineering</div>
-    </div>
-    <div class="pipe-arrow">→</div>
-    <div class="pipe-step">
-      <div class="pipe-dot"></div>
-      <div class="pipe-label active">Isolation Forest</div>
-    </div>
-    <div class="pipe-arrow">→</div>
-    <div class="pipe-step">
-      <div class="pipe-dot"></div>
-      <div class="pipe-label active">MF-UFS Scoring</div>
-    </div>
-    <div class="pipe-arrow">→</div>
-    <div class="pipe-step">
-      <div class="pipe-dot"></div>
-      <div class="pipe-label active">Label Creation</div>
-    </div>
-    <div class="pipe-arrow">→</div>
-    <div class="pipe-step">
-      <div class="pipe-dot"></div>
-      <div class="pipe-label active">Supervised Models</div>
-    </div>
-    <div class="pipe-arrow">→</div>
-    <div class="pipe-step">
-      <div class="pipe-dot"></div>
-      <div class="pipe-label active">Verdict</div>
-    </div>
-  </div>
-
-  <div class="grid">
-    <!-- Left: Input -->
-    <div>
-      <div class="card">
-        <div class="card-title">Transaction Input</div>
-
-        <!-- Presets -->
-        <div style="margin-bottom:1rem;">
-          <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-bottom:6px;letter-spacing:0.5px;">LOAD SCENARIO</div>
-          <div class="presets">
-            <button class="preset-btn" onclick="loadPreset('normal')">
-              Normal TX
-              <span class="preset-tag">LOW RISK EXAMPLE</span>
-            </button>
-            <button class="preset-btn" onclick="loadPreset('suspicious')">
-              Suspicious TX
-              <span class="preset-tag">HIGH VALUE + HIGH FEE</span>
-            </button>
-            <button class="preset-btn" onclick="loadPreset('scam_addr')">
-              Scam Address
-              <span class="preset-tag">KNOWN SCAM FLAG</span>
-            </button>
-            <button class="preset-btn" onclick="loadPreset('rapid_fire')">
-              Rapid-fire TX
-              <span class="preset-tag">LOW TIMEGAP</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="input-row">
-          <div class="input-group">
-            <label class="input-label">VALUE_IN (ETH)</label>
-            <div class="input-wrap">
-              <span class="input-prefix">Ξ</span>
-              <input type="number" id="val_in" value="0" step="0.000001" min="0">
-            </div>
-          </div>
-          <div class="input-group">
-            <label class="input-label">VALUE_OUT (ETH)</label>
-            <div class="input-wrap">
-              <span class="input-prefix">Ξ</span>
-              <input type="number" id="val_out" value="0" step="0.000001" min="0">
-            </div>
-          </div>
-        </div>
-
-        <div class="input-group">
-          <label class="input-label">TRANSACTION FEE (ETH)</label>
-          <div class="input-wrap">
-            <span class="input-prefix">Ξ</span>
-            <input type="number" id="fee" value="0.002" step="0.0001" min="0">
-          </div>
-        </div>
-
-        <div class="input-row">
-          <div class="input-group">
-            <label class="input-label">TIME GAP (sec)</label>
-            <div class="input-wrap">
-              <span class="input-prefix" style="font-size:10px;">⏱</span>
-              <input type="number" id="time_gap" value="12" step="1" min="0">
-            </div>
-          </div>
-          <div class="input-group">
-            <label class="input-label">BLOCK GAP</label>
-            <div class="input-wrap">
-              <span class="input-prefix" style="font-size:10px;">#</span>
-              <input type="number" id="block_gap" value="1" step="1" min="0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EtherGuard — Ethereum Fraud Detection</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #0a0e1a;
+        --bg2: #111827;
+        --bg3: #1a2235;
+        --card: #141c2e;
+        --border: rgba(99, 179, 237, 0.15);
+        --border2: rgba(99, 179, 237, 0.3);
+        --accent: #63b3ed;
+        --accent2: #4fd1c5;
+        --danger: #fc8181;
+        --danger-bg: rgba(252, 129, 129, 0.1);
+        --safe: #68d391;
+        --safe-bg: rgba(104, 211, 145, 0.1);
+        --warn: #f6ad55;
+        --warn-bg: rgba(246, 173, 85, 0.1);
+        --text: #e2e8f0;
+        --text2: #94a3b8;
+        --text3: #64748b;
+        --mono: "Space Mono", monospace;
+        --sans: "DM Sans", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--sans);
+        min-height: 100vh;
+        overflow-x: hidden;
+      }
+
+      /* Grid background */
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(99, 179, 237, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(99, 179, 237, 0.03) 1px, transparent 1px);
+        background-size: 40px 40px;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      .app {
+        position: relative;
+        z-index: 1;
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 2rem 1.5rem;
+      }
+
+      /* Header */
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 2.5rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .logo-icon {
+        width: 38px;
+        height: 38px;
+        background: linear-gradient(135deg, var(--accent), var(--accent2));
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+      }
+
+      .logo-text {
+        font-family: var(--mono);
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: var(--text);
+        letter-spacing: -0.5px;
+      }
+
+      .logo-text span {
+        color: var(--accent);
+      }
+
+      .header-badge {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--accent2);
+        background: rgba(79, 209, 197, 0.1);
+        border: 1px solid rgba(79, 209, 197, 0.2);
+        padding: 4px 10px;
+        border-radius: 20px;
+        letter-spacing: 1px;
+      }
+
+      /* Pipeline legend */
+      .pipeline {
+        display: flex;
+        align-items: center;
+        gap: 0;
+        margin-bottom: 2rem;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 1rem 1.5rem;
+        overflow-x: auto;
+      }
+
+      .pipe-step {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+
+      .pipe-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--accent);
+        flex-shrink: 0;
+      }
+
+      .pipe-dot.dim {
+        background: var(--text3);
+      }
+
+      .pipe-label {
+        font-size: 12px;
+        font-family: var(--mono);
+        color: var(--text2);
+        white-space: nowrap;
+      }
+
+      .pipe-label.active {
+        color: var(--accent);
+      }
+
+      .pipe-arrow {
+        font-size: 11px;
+        color: var(--text3);
+        margin: 0 10px;
+        flex-shrink: 0;
+      }
+
+      /* Main grid */
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+      }
+
+      @media (max-width: 720px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* Cards */
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 1.5rem;
+      }
+
+      .card-title {
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 2px;
+        color: var(--text3);
+        text-transform: uppercase;
+        margin-bottom: 1.2rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .card-title::before {
+        content: "";
+        display: block;
+        width: 3px;
+        height: 12px;
+        background: var(--accent);
+        border-radius: 2px;
+      }
+
+      /* Input groups */
+      .input-group {
+        margin-bottom: 1rem;
+      }
+
+      .input-label {
+        display: block;
+        font-size: 12px;
+        color: var(--text3);
+        font-family: var(--mono);
+        margin-bottom: 6px;
+        letter-spacing: 0.5px;
+      }
+
+      .input-wrap {
+        position: relative;
+        display: flex;
+        align-items: center;
+      }
+
+      .input-prefix {
+        position: absolute;
+        left: 12px;
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--accent);
+        pointer-events: none;
+      }
+
+      input[type="number"] {
+        width: 100%;
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: var(--text);
+        font-family: var(--mono);
+        font-size: 13px;
+        padding: 9px 12px 9px 36px;
+        outline: none;
+        transition: border-color 0.2s;
+        -moz-appearance: textfield;
+      }
+
+      input[type="number"]::-webkit-outer-spin-button,
+      input[type="number"]::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+      }
+
+      input[type="number"]:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(99, 179, 237, 0.1);
+      }
+
+      .input-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+      }
+
+      /* Analyze button */
+      .analyze-btn {
+        width: 100%;
+        margin-top: 0.5rem;
+        background: linear-gradient(135deg, var(--accent), var(--accent2));
+        border: none;
+        border-radius: 10px;
+        color: #0a0e1a;
+        font-family: var(--mono);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        padding: 13px;
+        cursor: pointer;
+        transition:
+          opacity 0.2s,
+          transform 0.1s;
+      }
+
+      .analyze-btn:hover {
+        opacity: 0.9;
+      }
+      .analyze-btn:active {
+        transform: scale(0.99);
+      }
+
+      /* Risk meter */
+      .risk-section {
+        margin-bottom: 1.5rem;
+      }
+
+      .risk-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 8px;
+      }
+
+      .risk-label {
+        font-size: 12px;
+        color: var(--text3);
+        font-family: var(--mono);
+      }
+
+      .risk-value {
+        font-family: var(--mono);
+        font-size: 2rem;
+        font-weight: 700;
+        transition: color 0.4s;
+      }
+
+      .risk-bar-bg {
+        height: 8px;
+        background: var(--bg2);
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 4px;
+      }
+
+      .risk-bar-fill {
+        height: 100%;
+        border-radius: 4px;
+        transition:
+          width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1),
+          background 0.4s;
+        width: 0%;
+      }
+
+      .risk-ticks {
+        display: flex;
+        justify-content: space-between;
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--text3);
+        margin-top: 3px;
+      }
+
+      /* Verdict banner */
+      .verdict {
+        padding: 12px 16px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 1.5rem;
+        transition: all 0.4s;
+        background: var(--bg2);
+        border: 1px solid var(--border);
+      }
+
+      .verdict-icon {
+        font-size: 22px;
+        flex-shrink: 0;
+      }
+
+      .verdict-text strong {
+        display: block;
+        font-size: 14px;
+        font-family: var(--mono);
+        margin-bottom: 2px;
+      }
+
+      .verdict-text span {
+        font-size: 12px;
+        color: var(--text2);
+      }
+
+      /* Model votes */
+      .models-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 8px;
+        margin-bottom: 1.5rem;
+      }
+
+      .model-card {
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px 12px;
+        text-align: center;
+        transition: all 0.3s;
+      }
+
+      .model-name {
+        font-size: 10px;
+        font-family: var(--mono);
+        color: var(--text3);
+        letter-spacing: 0.5px;
+        margin-bottom: 4px;
+      }
+
+      .model-verdict {
+        font-size: 12px;
+        font-family: var(--mono);
+        font-weight: 700;
+      }
+
+      .model-prob {
+        font-size: 11px;
+        color: var(--text2);
+        margin-top: 2px;
+      }
+
+      /* Z-score bars */
+      .zscore-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+
+      .zscore-label {
+        font-size: 11px;
+        font-family: var(--mono);
+        color: var(--text2);
+        width: 90px;
+        flex-shrink: 0;
+      }
+
+      .zscore-bar-wrap {
+        flex: 1;
+        height: 20px;
+        background: var(--bg2);
+        border-radius: 4px;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .zscore-center {
+        position: absolute;
+        left: 50%;
+        top: 0;
+        bottom: 0;
+        width: 1px;
+        background: var(--border2);
+      }
+
+      .zscore-fill {
+        position: absolute;
+        top: 3px;
+        bottom: 3px;
+        border-radius: 3px;
+        transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+
+      .zscore-val {
+        font-size: 11px;
+        font-family: var(--mono);
+        width: 52px;
+        text-align: right;
+        flex-shrink: 0;
+      }
+
+      /* Alert badges */
+      .alert-badge {
+        font-size: 9px;
+        font-family: var(--mono);
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-left: 4px;
+        vertical-align: middle;
+      }
+
+      /* Score breakdown */
+      .score-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 8px;
+        margin-bottom: 1rem;
+      }
+
+      .score-chip {
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 10px;
+        text-align: center;
+      }
+
+      .score-chip-label {
+        font-size: 10px;
+        font-family: var(--mono);
+        color: var(--text3);
+        margin-bottom: 4px;
+      }
+
+      .score-chip-val {
+        font-size: 16px;
+        font-family: var(--mono);
+        font-weight: 700;
+        color: var(--accent);
+      }
+
+      /* Empty state */
+      .empty-state {
+        text-align: center;
+        padding: 2.5rem 1rem;
+        color: var(--text3);
+      }
+
+      .empty-icon {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+        opacity: 0.4;
+      }
+
+      .empty-text {
+        font-size: 13px;
+        font-family: var(--mono);
+      }
+
+      /* Right panel */
+      .right-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+
+      /* Tabs */
+      .tab-bar {
+        display: flex;
+        gap: 4px;
+        background: var(--bg2);
+        border-radius: 8px;
+        padding: 4px;
+        margin-bottom: 1rem;
+      }
+
+      .tab-btn {
+        flex: 1;
+        background: none;
+        border: none;
+        border-radius: 6px;
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--text3);
+        padding: 6px 4px;
+        cursor: pointer;
+        transition: all 0.2s;
+        letter-spacing: 0.5px;
+      }
+
+      .tab-btn.active {
+        background: var(--card);
+        color: var(--accent);
+        border: 1px solid var(--border);
+      }
+
+      .tab-panel {
+        display: none;
+      }
+      .tab-panel.active {
+        display: block;
+      }
+
+      /* Preset buttons */
+      .presets {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        margin-bottom: 1rem;
+      }
+
+      .preset-btn {
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: var(--text2);
+        font-family: var(--mono);
+        font-size: 11px;
+        padding: 8px 10px;
+        cursor: pointer;
+        text-align: left;
+        transition: all 0.2s;
+      }
+
+      .preset-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .preset-btn .preset-tag {
+        display: block;
+        font-size: 9px;
+        color: var(--text3);
+        margin-top: 2px;
+        letter-spacing: 0.5px;
+      }
+
+      /* Animation */
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+      .analyzing {
+        animation: pulse 1s ease-in-out infinite;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+      .fade-in {
+        animation: fadeIn 0.35s ease forwards;
+      }
+
+      /* About section */
+      .about-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        font-size: 11px;
+        font-family: var(--mono);
+        color: var(--text3);
+        padding: 5px 12px;
+        margin-right: 6px;
+        margin-bottom: 6px;
+      }
+
+      .about-pill-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--accent2);
+      }
+
+      footer {
+        margin-top: 2.5rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+
+      footer p {
+        font-size: 11px;
+        font-family: var(--mono);
+        color: var(--text3);
+      }
+
+      .accuracy-badge {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .acc-chip {
+        font-size: 11px;
+        font-family: var(--mono);
+        color: var(--accent2);
+        background: rgba(79, 209, 197, 0.08);
+        border: 1px solid rgba(79, 209, 197, 0.15);
+        padding: 3px 8px;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header>
+        <div class="logo">
+          <div class="logo-icon">⬡</div>
+          <div>
+            <div class="logo-text">Ether<span>Guard</span></div>
+            <div
+              style="
+                font-size: 11px;
+                color: var(--text3);
+                font-family: var(--mono);
+                letter-spacing: 0.5px;
+              "
+            >
+              Fraud Detection System
             </div>
           </div>
         </div>
+        <div class="header-badge">MF-UFS PIPELINE</div>
+      </header>
 
-        <div class="input-row">
-          <div class="input-group">
-            <label class="input-label">GAS (units)</label>
-            <div class="input-wrap">
-              <span class="input-prefix" style="font-size:10px;">⛽</span>
-              <input type="number" id="gas" value="21000" step="1000" min="0">
-            </div>
-          </div>
-          <div class="input-group">
-            <label class="input-label">GAS USED (units)</label>
-            <div class="input-wrap">
-              <span class="input-prefix" style="font-size:10px;">⛽</span>
-              <input type="number" id="gas_used" value="21000" step="1000" min="0">
-            </div>
-          </div>
+      <!-- Pipeline legend -->
+      <div class="pipeline">
+        <div class="pipe-step">
+          <div class="pipe-dot"></div>
+          <div class="pipe-label active">Feature Engineering</div>
         </div>
-
-        <div class="input-row" style="margin-bottom:1rem;">
-          <div class="input-group" style="margin-bottom:0">
-            <label class="input-label">FROM SCAM ADDRESS</label>
-            <select id="from_scam" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:13px;padding:9px 12px;outline:none;cursor:pointer;">
-              <option value="0">0 — No</option>
-              <option value="1">1 — Yes (flagged)</option>
-            </select>
-          </div>
-          <div class="input-group" style="margin-bottom:0">
-            <label class="input-label">TO SCAM ADDRESS</label>
-            <select id="to_scam" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:13px;padding:9px 12px;outline:none;cursor:pointer;">
-              <option value="0">0 — No</option>
-              <option value="1">1 — Yes (flagged)</option>
-            </select>
-          </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-step">
+          <div class="pipe-dot"></div>
+          <div class="pipe-label active">Isolation Forest</div>
         </div>
-
-        <button class="analyze-btn" onclick="analyze()" id="analyzeBtn">
-          ANALYZE TRANSACTION
-        </button>
-      </div>
-
-      <!-- About card -->
-      <div class="card" style="margin-top:1.5rem;">
-        <div class="card-title">Model Architecture</div>
-        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:1rem;">
-          <div class="about-pill"><div class="about-pill-dot"></div>Isolation Forest</div>
-          <div class="about-pill"><div class="about-pill-dot"></div>MF-UFS Scoring</div>
-          <div class="about-pill"><div class="about-pill-dot"></div>Decision Tree</div>
-          <div class="about-pill"><div class="about-pill-dot"></div>Random Forest</div>
-          <div class="about-pill"><div class="about-pill-dot"></div>KNN</div>
-          <div class="about-pill"><div class="about-pill-dot"></div>Logistic Reg.</div>
-          <div class="about-pill"><div class="about-pill-dot"></div>SVM</div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-step">
+          <div class="pipe-dot"></div>
+          <div class="pipe-label active">MF-UFS Scoring</div>
         </div>
-        <p style="font-size:12px;color:var(--text3);line-height:1.7;font-family:var(--mono);">
-          MF-UFS fuses three anomaly signals: IF_Score (Isolation Forest), StatScore (z-score deviation), and TempScore (rolling window deviation) with weights 0.3/0.4/0.3. Top 15% FinalScore → FraudFlag=1.
-        </p>
-      </div>
-    </div>
-
-    <!-- Right: Results -->
-    <div class="right-panel">
-      <div class="card">
-        <div class="card-title">Risk Analysis</div>
-
-        <div id="emptyState" class="empty-state">
-          <div class="empty-icon">🔍</div>
-          <div class="empty-text">Enter transaction details<br>and click Analyze</div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-step">
+          <div class="pipe-dot"></div>
+          <div class="pipe-label active">Label Creation</div>
         </div>
-
-        <div id="results" style="display:none;">
-
-          <!-- Verdict -->
-          <div class="verdict" id="verdictBanner">
-            <div class="verdict-icon" id="verdictIcon">—</div>
-            <div class="verdict-text">
-              <strong id="verdictTitle">—</strong>
-              <span id="verdictSub">—</span>
-            </div>
-          </div>
-
-          <!-- Risk meter -->
-          <div class="risk-section">
-            <div class="risk-header">
-              <div class="risk-label">MODEL RISK SCORE</div>
-              <div class="risk-value" id="riskPct">—</div>
-            </div>
-            <div class="risk-bar-bg">
-              <div class="risk-bar-fill" id="riskBar"></div>
-            </div>
-            <div class="risk-ticks">
-              <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
-            </div>
-          </div>
-
-          <!-- Score breakdown -->
-          <div class="score-grid">
-            <div class="score-chip">
-              <div class="score-chip-label">IF_SCORE</div>
-              <div class="score-chip-val" id="ifScore">—</div>
-            </div>
-            <div class="score-chip">
-              <div class="score-chip-label">STAT_SCORE</div>
-              <div class="score-chip-val" id="statScore">—</div>
-            </div>
-            <div class="score-chip">
-              <div class="score-chip-label">FINAL_SCORE</div>
-              <div class="score-chip-val" id="finalScore">—</div>
-            </div>
-          </div>
-
-          <!-- Tabs -->
-          <div class="tab-bar">
-            <button class="tab-btn active" onclick="switchTab('votes',this)">MODEL VOTES</button>
-            <button class="tab-btn" onclick="switchTab('zscores',this)">Z-SCORES</button>
-            <button class="tab-btn" onclick="switchTab('features',this)">FEATURES</button>
-          </div>
-
-          <!-- Tab: Model Votes -->
-          <div class="tab-panel active" id="tab-votes">
-            <div class="models-grid" id="modelVotes"></div>
-            <div id="consensusNote" style="font-size:11px;font-family:var(--mono);color:var(--text3);text-align:center;margin-top:4px;"></div>
-          </div>
-
-          <!-- Tab: Z-Scores -->
-          <div class="tab-panel" id="tab-zscores">
-            <div id="zscoreRows"></div>
-            <div style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-top:8px;display:flex;gap:12px;">
-              <span>🚨 |z| &gt; 3 critical</span>
-              <span>⚠ |z| &gt; 2 elevated</span>
-            </div>
-          </div>
-
-          <!-- Tab: Derived Features -->
-          <div class="tab-panel" id="tab-features">
-            <div id="featureRows"></div>
-          </div>
-
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-step">
+          <div class="pipe-dot"></div>
+          <div class="pipe-label active">Supervised Models</div>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-step">
+          <div class="pipe-dot"></div>
+          <div class="pipe-label active">Verdict</div>
         </div>
       </div>
+
+      <div class="grid">
+        <!-- Left: Input -->
+        <div>
+          <div class="card">
+            <div class="card-title">Transaction Input</div>
+
+            <!-- Presets -->
+            <div style="margin-bottom: 1rem">
+              <div
+                style="
+                  font-size: 11px;
+                  color: var(--text3);
+                  font-family: var(--mono);
+                  margin-bottom: 6px;
+                  letter-spacing: 0.5px;
+                "
+              >
+                LOAD SCENARIO
+              </div>
+              <div class="presets">
+                <button class="preset-btn" onclick="loadPreset('normal')">
+                  Normal TX
+                  <span class="preset-tag">LOW RISK EXAMPLE</span>
+                </button>
+                <button class="preset-btn" onclick="loadPreset('suspicious')">
+                  Suspicious TX
+                  <span class="preset-tag">HIGH VALUE + HIGH FEE</span>
+                </button>
+                <button class="preset-btn" onclick="loadPreset('scam_addr')">
+                  Scam Address
+                  <span class="preset-tag">KNOWN SCAM FLAG</span>
+                </button>
+                <button class="preset-btn" onclick="loadPreset('rapid_fire')">
+                  Rapid-fire TX
+                  <span class="preset-tag">LOW TIMEGAP</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="input-row">
+              <div class="input-group">
+                <label class="input-label">VALUE_IN (ETH)</label>
+                <div class="input-wrap">
+                  <span class="input-prefix">Ξ</span>
+                  <input
+                    type="number"
+                    id="val_in"
+                    value="0"
+                    step="0.000001"
+                    min="0"
+                  />
+                </div>
+              </div>
+              <div class="input-group">
+                <label class="input-label">VALUE_OUT (ETH)</label>
+                <div class="input-wrap">
+                  <span class="input-prefix">Ξ</span>
+                  <input
+                    type="number"
+                    id="val_out"
+                    value="0"
+                    step="0.000001"
+                    min="0"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div class="input-group">
+              <label class="input-label">TRANSACTION FEE (ETH)</label>
+              <div class="input-wrap">
+                <span class="input-prefix">Ξ</span>
+                <input
+                  type="number"
+                  id="fee"
+                  value="0.002"
+                  step="0.0001"
+                  min="0"
+                />
+              </div>
+            </div>
+
+            <div class="input-row">
+              <div class="input-group">
+                <label class="input-label">TIME GAP (sec)</label>
+                <div class="input-wrap">
+                  <span class="input-prefix" style="font-size: 10px">⏱</span>
+                  <input
+                    type="number"
+                    id="time_gap"
+                    value="12"
+                    step="1"
+                    min="0"
+                  />
+                </div>
+              </div>
+              <div class="input-group">
+                <label class="input-label">BLOCK GAP</label>
+                <div class="input-wrap">
+                  <span class="input-prefix" style="font-size: 10px">#</span>
+                  <input
+                    type="number"
+                    id="block_gap"
+                    value="1"
+                    step="1"
+                    min="0"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div class="input-row">
+              <div class="input-group">
+                <label class="input-label">GAS (units)</label>
+                <div class="input-wrap">
+                  <span class="input-prefix" style="font-size: 10px">⛽</span>
+                  <input
+                    type="number"
+                    id="gas"
+                    value="21000"
+                    step="1000"
+                    min="0"
+                  />
+                </div>
+              </div>
+              <div class="input-group">
+                <label class="input-label">GAS USED (units)</label>
+                <div class="input-wrap">
+                  <span class="input-prefix" style="font-size: 10px">⛽</span>
+                  <input
+                    type="number"
+                    id="gas_used"
+                    value="21000"
+                    step="1000"
+                    min="0"
+                  />
+                </div>
+              </div>
+            </div>
+            <button class="analyze-btn" onclick="analyze()" id="analyzeBtn">
+              ANALYZE TRANSACTION
+            </button>
+          </div>
+
+          <!-- About card -->
+          <div class="card" style="margin-top: 1.5rem">
+            <div class="card-title">Model Architecture</div>
+            <div
+              style="
+                display: flex;
+                flex-wrap: wrap;
+                gap: 4px;
+                margin-bottom: 1rem;
+              "
+            >
+              <div class="about-pill">
+                <div class="about-pill-dot"></div>
+                Isolation Forest
+              </div>
+              <div class="about-pill">
+                <div class="about-pill-dot"></div>
+                MF-UFS Scoring
+              </div>
+              <div class="about-pill">
+                <div class="about-pill-dot"></div>
+                Decision Tree
+              </div>
+              <div class="about-pill">
+                <div class="about-pill-dot"></div>
+                Random Forest
+              </div>
+              <div class="about-pill">
+                <div class="about-pill-dot"></div>
+                Logistic Reg.
+              </div>
+            </div>
+            <p
+              style="
+                font-size: 12px;
+                color: var(--text3);
+                line-height: 1.7;
+                font-family: var(--mono);
+              "
+            >
+              Final prediction is based on ensemble of 3 models: Decision Tree,
+              Random Forest, and Logistic Regression. MF-UFS scores
+              are shown only for interpretability.
+            </p>
+          </div>
+        </div>
+
+        <!-- Right: Results -->
+        <div class="right-panel">
+          <div class="card">
+            <div class="card-title">Risk Analysis</div>
+
+            <div id="emptyState" class="empty-state">
+              <div class="empty-icon">🔍</div>
+              <div class="empty-text">
+                Enter transaction details<br />and click Analyze
+              </div>
+            </div>
+
+            <div id="results" style="display: none">
+              <!-- Verdict -->
+              <div class="verdict" id="verdictBanner">
+                <div class="verdict-icon" id="verdictIcon">—</div>
+                <div class="verdict-text">
+                  <strong id="verdictTitle">—</strong>
+                  <span id="verdictSub">—</span>
+                </div>
+              </div>
+
+              <!-- Risk meter -->
+              <div class="risk-section">
+                <div class="risk-header">
+                  <div class="risk-label">MODEL RISK SCORE</div>
+                  <div class="risk-value" id="riskPct">—</div>
+                </div>
+                <div class="risk-bar-bg">
+                  <div class="risk-bar-fill" id="riskBar"></div>
+                </div>
+                <div class="risk-ticks">
+                  <span>0%</span><span>25%</span><span>50%</span><span>75%</span
+                  ><span>100%</span>
+                </div>
+              </div>
+
+              <!-- Score breakdown -->
+              <div class="score-grid">
+                <div class="score-chip">
+                  <div class="score-chip-label">IF_SCORE</div>
+                  <div class="score-chip-val" id="ifScore">—</div>
+                </div>
+                <div class="score-chip">
+                  <div class="score-chip-label">STAT_SCORE</div>
+                  <div class="score-chip-val" id="statScore">—</div>
+                </div>
+                <div class="score-chip">
+                  <div class="score-chip-label">MODEL_SCORE</div>
+                  <div class="score-chip-val" id="finalScore">—</div>
+                </div>
+              </div>
+
+              <!-- Tabs -->
+              <div class="tab-bar">
+                <button
+                  class="tab-btn active"
+                  onclick="switchTab('votes', this)"
+                >
+                  MODEL VOTES
+                </button>
+                <button class="tab-btn" onclick="switchTab('zscores', this)">
+                  Z-SCORES
+                </button>
+                <button class="tab-btn" onclick="switchTab('features', this)">
+                  FEATURES
+                </button>
+              </div>
+
+              <!-- Tab: Model Votes -->
+              <div class="tab-panel active" id="tab-votes">
+                <div class="models-grid" id="modelVotes"></div>
+                <div
+                  id="consensusNote"
+                  style="
+                    font-size: 11px;
+                    font-family: var(--mono);
+                    color: var(--text3);
+                    text-align: center;
+                    margin-top: 4px;
+                  "
+                ></div>
+              </div>
+
+              <!-- Tab: Z-Scores -->
+              <div class="tab-panel" id="tab-zscores">
+                <div id="zscoreRows"></div>
+                <div
+                  style="
+                    font-size: 10px;
+                    font-family: var(--mono);
+                    color: var(--text3);
+                    margin-top: 8px;
+                    display: flex;
+                    gap: 12px;
+                  "
+                >
+                  <span>🚨 |z| &gt; 3 critical</span>
+                  <span>⚠ |z| &gt; 2 elevated</span>
+                </div>
+              </div>
+
+              <!-- Tab: Derived Features -->
+              <div class="tab-panel" id="tab-features">
+                <div id="featureRows"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer>
+        <p>CS1138 — Ethereum Fraud Detection · MF-UFS Pipeline</p>
+        <div class="accuracy-badge">
+          <div class="acc-chip">DT ~93%</div>
+          <div class="acc-chip">RF ~95%</div>
+          <div class="acc-chip">LR ~88%</div>
+        </div>
+      </footer>
     </div>
-  </div>
 
-  <footer>
-    <p>CS1138 — Ethereum Fraud Detection · MF-UFS Pipeline</p>
-    <div class="accuracy-badge">
-      <div class="acc-chip">DT ~93%</div>
-      <div class="acc-chip">RF ~95%</div>
-      <div class="acc-chip">KNN ~89%</div>
-      <div class="acc-chip">LR ~88%</div>
-    </div>
-  </footer>
-</div>
+    <script>
+      // ─── Dataset statistics from labeled_data.csv (used for z-score normalization)
+      // These are representative of the actual dataset used in the pipeline
+      const STATS = {
+        Value: { mean: 0.1823, std: 2.8741 },
+        GasCost: { mean: 0.00412, std: 0.00831 },
+        GasEfficiency: { mean: 0.8912, std: 0.1503 },
+        TimeGap: { mean: 14.21, std: 38.92 },
+        BlockGap: { mean: 1.14, std: 2.87 },
+      };
 
-<script>
-// ─── Dataset statistics from labeled_data.csv (used for z-score normalization)
-// These are representative of the actual dataset used in the pipeline
-const STATS = {
-  Value:         { mean: 0.1823,   std: 2.8741  },
-  GasCost:       { mean: 0.00412,  std: 0.00831 },
-  GasEfficiency: { mean: 0.8912,   std: 0.1503  },
-  TimeGap:       { mean: 14.21,    std: 38.92   },
-  BlockGap:      { mean: 1.14,     std: 2.87    },
-};
+      // ─── Presets
+      const PRESETS = {
+        normal: {
+          val_in: 0.05,
+          val_out: 0.03,
+          fee: 0.0021,
+          time_gap: 14,
+          block_gap: 1,
+          gas: 21000,
+          gas_used: 21000,
+        },
 
-// ─── Presets
-const PRESETS = {
-  normal:     { val_in:0.05,  val_out:0.03,  fee:0.0021,  time_gap:14, block_gap:1,  gas:21000, gas_used:21000, from_scam:0, to_scam:0 },
-  suspicious: { val_in:45.0,  val_out:0.001, fee:0.087,   time_gap:1,  block_gap:1,  gas:50000, gas_used:49500, from_scam:0, to_scam:0 },
-  scam_addr:  { val_in:0.8,   val_out:0.001, fee:0.0041,  time_gap:8,  block_gap:1,  gas:30000, gas_used:28000, from_scam:1, to_scam:1 },
-  rapid_fire: { val_in:0.12,  val_out:0.10,  fee:0.0019,  time_gap:0.5,block_gap:0,  gas:21000, gas_used:21000, from_scam:0, to_scam:0 },
-};
+        suspicious: {
+          val_in: 5,
+          val_out: 4.8,
+          fee: 0.02,
+          time_gap: 5,
+          block_gap: 1,
+          gas: 30000,
+          gas_used: 28000,
+        },
 
-function loadPreset(key) {
-  const p = PRESETS[key];
-  document.getElementById('val_in').value    = p.val_in;
-  document.getElementById('val_out').value   = p.val_out;
-  document.getElementById('fee').value       = p.fee;
-  document.getElementById('time_gap').value  = p.time_gap;
-  document.getElementById('block_gap').value = p.block_gap;
-  document.getElementById('gas').value       = p.gas;
-  document.getElementById('gas_used').value  = p.gas_used;
-  document.getElementById('from_scam').value = p.from_scam;
-  document.getElementById('to_scam').value   = p.to_scam;
-}
+        rapid_fire: {
+          val_in: 0.5,
+          val_out: 0.49,
+          fee: 0.003,
+          time_gap: 1,
+          block_gap: 0,
+          gas: 22000,
+          gas_used: 21000,
+        },
 
-function switchTab(name, btn) {
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById('tab-' + name).classList.add('active');
-}
+        scam_addr: {
+          val_in: 10,
+          val_out: 9.5,
+          fee: 0.05,
+          time_gap: 2,
+          block_gap: 1,
+          gas: 40000,
+          gas_used: 39000,
+        },
+      };
+      function loadPreset(key) {
+        const p = PRESETS[key];
+        document.getElementById("val_in").value = p.val_in;
+        document.getElementById("val_out").value = p.val_out;
+        document.getElementById("fee").value = p.fee;
+        document.getElementById("time_gap").value = p.time_gap;
+        document.getElementById("block_gap").value = p.block_gap;
+        document.getElementById("gas").value = p.gas;
+        document.getElementById("gas_used").value = p.gas_used;
+      }
 
-function zScore(val, feat) {
-  const eps = 1e-9;
-  return (val - STATS[feat].mean) / (STATS[feat].std + eps);
-}
+      function switchTab(name, btn) {
+        document
+          .querySelectorAll(".tab-btn")
+          .forEach((b) => b.classList.remove("active"));
+        document
+          .querySelectorAll(".tab-panel")
+          .forEach((p) => p.classList.remove("active"));
+        btn.classList.add("active");
+        document.getElementById("tab-" + name).classList.add("active");
+      }
 
-// ─── Core analysis logic matching the actual pipeline
-function computeAll(inputs) {
-  const eps = 1e-9;
-  const { val_in, val_out, fee, time_gap, block_gap, gas, gas_used, from_scam, to_scam } = inputs;
+      function zScore(val, feat) {
+        const eps = 1e-9;
+        return (val - STATS[feat].mean) / (STATS[feat].std + eps);
+      }
 
-  // Feature engineering (matching feature_engineering.py)
-  const Value         = val_in + val_out;
-  const GasCost       = fee;
-  const GasEfficiency = gas > 0 ? gas_used / (gas + eps) : 0;
-  const TimeGap       = time_gap;
-  const BlockGap      = block_gap;
+      async function analyze() {
+        const btn = document.getElementById("analyzeBtn");
+        btn.textContent = "ANALYZING...";
+        btn.disabled = true;
 
-  // Z-scores
-  const Value_z         = zScore(Value,         'Value');
-  const GasCost_z       = zScore(GasCost,       'GasCost');
-  const GasEfficiency_z = zScore(GasEfficiency, 'GasEfficiency');
-  const TimeGap_z       = zScore(TimeGap,       'TimeGap');
-  const BlockGap_z      = zScore(BlockGap,      'BlockGap');
+        const inputs = {
+          val_in: +document.getElementById("val_in").value,
+          val_out: +document.getElementById("val_out").value,
+          fee: +document.getElementById("fee").value,
+          time_gap: +document.getElementById("time_gap").value,
+          block_gap: +document.getElementById("block_gap").value,
+          gas: +document.getElementById("gas").value,
+          gas_used: +document.getElementById("gas_used").value,
+        };
 
-  // Isolation Forest approximation: use combined anomaly signal
-  // (In the real pipeline, IF is an unsupervised model; here we approximate its output)
-  const if_signal = (Math.abs(Value_z)*0.4 + Math.abs(GasCost_z)*0.3 + Math.abs(TimeGap_z)*0.2 + Math.abs(BlockGap_z)*0.1);
-  const IF_Score  = Math.min(if_signal / 8.0, 1.0);
+        try {
+          const res = await fetch("http://127.0.0.1:5000/predict", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(inputs)
+          });
+          const data = await res.json();
+          console.log("RESPONSE:", data);
+          renderResults(data);
+        } catch (err) {
+          console.error("ERROR:", err);
+        } finally {
+          btn.textContent = "ANALYZE TRANSACTION";
+          btn.disabled = false;
+        }
+      }
 
-  // StatScore (matching mfufs.py)
-  let statRaw = Math.abs(Value_z) + Math.abs(GasEfficiency_z) + Math.abs(TimeGap_z) + Math.abs(GasCost_z);
-  // Normalize to [0,1] (typical range based on dataset)
-  const StatScore = Math.min(statRaw / 12.0, 1.0);
+      function renderResults(res) {
+        document.getElementById("emptyState").style.display = "none";
+        const resEl = document.getElementById("results");
+        resEl.style.display = "block";
+        resEl.classList.add("fade-in");
 
-  // TempScore approximation (rolling window deviation)
-  // Since we don't have rolling history, we approximate based on value deviation
-  const TempScore = Math.min(Math.abs(Value_z) * 0.15, 1.0);
+        const probs = Object.values(res.modelProbs);
+        const avgModelProb = probs.reduce((a, b) => a + b, 0) / probs.length;
+        const modelPct = Math.round(avgModelProb * 100);
 
-  // FinalScore (matching mfufs.py weights)
-  const FinalScore = 0.3 * IF_Score + 0.4 * StatScore + 0.3 * TempScore;
+        const isHighRisk = modelPct >= 60;
+        const isMedRisk = modelPct >= 30 && modelPct < 60;
 
+        // Risk bar
+        document.getElementById("riskPct").textContent = modelPct + "%";
+        document.getElementById("riskPct").style.color = isHighRisk
+          ? "var(--danger)"
+          : isMedRisk
+            ? "var(--warn)"
+            : "var(--safe)";
+        const bar = document.getElementById("riskBar");
+        bar.style.width = modelPct + "%";
+        bar.style.background = isHighRisk
+          ? "linear-gradient(90deg, #fc8181, #feb2b2)"
+          : isMedRisk
+            ? "linear-gradient(90deg, #f6ad55, #fbd38d)"
+            : "linear-gradient(90deg, #68d391, #9ae6b4)";
 
-  // Derived features (matching decision_tree_model.py / random_forest.py)
-  const value_ratio    = Value / (GasCost + 1);
-  const is_high_value  = Value > STATS.Value.mean ? 1 : 0;
+        // Scores
+        document.getElementById("ifScore").textContent =
+          res.IF_Score.toFixed(3);
+        document.getElementById("statScore").textContent =
+          res.StatScore.toFixed(3);
+        document.getElementById("finalScore").textContent =
+          res.FinalScore.toFixed(3);
+        document.getElementById("finalScore").style.color = isHighRisk
+          ? "var(--danger)"
+          : isMedRisk
+            ? "var(--warn)"
+            : "var(--accent2)";
 
-  // Feature vector for supervised models [Value_z, GasCost_z, GasEfficiency_z, TimeGap_z, BlockGap_z, value_ratio, gas_efficiency, is_high_value, from_scam, to_scam]
-  const feat = [Value_z, GasCost_z, GasEfficiency_z, TimeGap_z, BlockGap_z, value_ratio, GasEfficiency, is_high_value, from_scam, to_scam];
+        // Verdict
+        const banner = document.getElementById("verdictBanner");
+        if (isHighRisk) {
+          banner.style.background = "var(--danger-bg)";
+          banner.style.border = "1px solid rgba(252,129,129,0.3)";
+          document.getElementById("verdictIcon").textContent = "🚨";
+          document.getElementById("verdictTitle").textContent =
+            "HIGH FRAUD RISK";
+          document.getElementById("verdictTitle").style.color = "var(--danger)";
+          document.getElementById("verdictSub").textContent =
+            "High fraud probability based on ensemble model predictions";
+        } else if (isMedRisk) {
+          banner.style.background = "var(--warn-bg)";
+          banner.style.border = "1px solid rgba(246,173,85,0.3)";
+          document.getElementById("verdictIcon").textContent = "⚠️";
+          document.getElementById("verdictTitle").textContent = "ELEVATED RISK";
+          document.getElementById("verdictTitle").style.color = "var(--warn)";
+          document.getElementById("verdictSub").textContent =
+            "Moderate fraud probability — flagged by some models";
+        } else {
+          banner.style.background = "var(--safe-bg)";
+          banner.style.border = "1px solid rgba(104,211,145,0.3)";
+          document.getElementById("verdictIcon").textContent = "✅";
+          document.getElementById("verdictTitle").textContent = "LIKELY NORMAL";
+          document.getElementById("verdictTitle").style.color = "var(--safe)";
+          document.getElementById("verdictSub").textContent =
+            "Low fraud probability based on model predictions";
+        }
 
-  // ── Simulate each model's prediction
-  // Each model has a different decision boundary based on the training pipeline
-  // These formulas capture the logic each model learned
-
-  function scaledFraudProb(base) { return Math.max(0, Math.min(1, base)); }
-
-  // Decision Tree: splits on from_scam/to_scam first, then value_z, then gas patterns
-  function dtPredict() {
-    if (from_scam === 1 || to_scam === 1) return scaledFraudProb(0.78 + Math.abs(Value_z)*0.03);
-    if (Math.abs(Value_z) > 3.5) return scaledFraudProb(0.72 + Math.abs(GasCost_z)*0.04);
-    if (Math.abs(GasCost_z) > 3.0 && Math.abs(TimeGap_z) > 2.5) return scaledFraudProb(0.65);
-    if (FinalScore > 0.55) return scaledFraudProb(0.58 + FinalScore*0.3);
-    const base = 0.04 + FinalScore*0.25 + Math.abs(Value_z)*0.04 + from_scam*0.5 + to_scam*0.5;
-    return scaledFraudProb(base);
-  }
-
-  // Random Forest: ensemble signal, more stable
-  function rfPredict() {
-    if (from_scam === 1 || to_scam === 1) return scaledFraudProb(0.82 + FinalScore*0.1);
-    const anomaly = (Math.abs(Value_z)*0.35 + Math.abs(GasCost_z)*0.25 + Math.abs(TimeGap_z)*0.2 + Math.abs(BlockGap_z)*0.1 + Math.abs(GasEfficiency_z)*0.1);
-    const base = 0.03 + (anomaly/10)*0.6 + FinalScore*0.35 + is_high_value*0.05;
-    return scaledFraudProb(base);
-  }
-
-  // KNN: distance-based, sensitive to outliers in multiple dims
-  function knnPredict() {
-    const dist = Math.sqrt(Value_z**2 + GasCost_z**2 + TimeGap_z**2 + BlockGap_z**2 + GasEfficiency_z**2);
-    const base = 0.05 + (dist / 12)*0.55 + FinalScore*0.3 + (from_scam + to_scam)*0.35;
-    return scaledFraudProb(base);
-  }
-
-  // Logistic Regression: linear combination with balanced class weight
-  function lrPredict() {
-    const logit = -2.1 + Value_z*0.38 + GasCost_z*0.29 + TimeGap_z*0.18 + BlockGap_z*0.09 + GasEfficiency_z*(-0.12) + from_scam*2.8 + to_scam*2.8 + FinalScore*3.1;
-    return scaledFraudProb(1 / (1 + Math.exp(-logit)));
-  }
-
-  // SVM: hyperplane margin approach
-  function svmPredict() {
-    const margin = Value_z*0.41 + GasCost_z*0.32 + TimeGap_z*0.19 + (from_scam+to_scam)*2.6 + FinalScore*2.8 - 2.3;
-    return scaledFraudProb(1 / (1 + Math.exp(-margin)));
-  }
-
-  const modelProbs = {
-    'Decision Tree':      dtPredict(),
-    'Random Forest':      rfPredict(),
-    'KNN':                knnPredict(),
-    'Logistic Reg.':      lrPredict(),
-    'SVM':                svmPredict(),
-  };
-
-  const zscores = { Value: Value_z, GasCost: GasCost_z, GasEfficiency: GasEfficiency_z, TimeGap: TimeGap_z, BlockGap: BlockGap_z };
-
-  const derivedFeatures = {
-    'Value (total ETH)':    Value.toFixed(6),
-    'GasCost (ETH)':        GasCost.toFixed(6),
-    'GasEfficiency':        GasEfficiency.toFixed(4),
-    'value_ratio':          value_ratio.toFixed(4),
-    'is_high_value':        is_high_value,
-    'FinalScore':           FinalScore.toFixed(4),
-  };
-
-  return { IF_Score, StatScore, TempScore, FinalScore, modelProbs, zscores, derivedFeatures };
-}
-
-function analyze() {
-  const btn = document.getElementById('analyzeBtn');
-  btn.textContent = 'ANALYZING...';
-  btn.classList.add('analyzing');
-  btn.disabled = true;
-
-  setTimeout(() => {
-    const inputs = {
-      val_in:    +document.getElementById('val_in').value,
-      val_out:   +document.getElementById('val_out').value,
-      fee:       +document.getElementById('fee').value,
-      time_gap:  +document.getElementById('time_gap').value,
-      block_gap: +document.getElementById('block_gap').value,
-      gas:       +document.getElementById('gas').value,
-      gas_used:  +document.getElementById('gas_used').value,
-      from_scam: +document.getElementById('from_scam').value,
-      to_scam:   +document.getElementById('to_scam').value,
-    };
-
-    const res = computeAll(inputs);
-    renderResults(res);
-
-    btn.textContent = 'ANALYZE TRANSACTION';
-    btn.classList.remove('analyzing');
-    btn.disabled = false;
-  }, 600);
-}
-
-function renderResults(res) {
-  document.getElementById('emptyState').style.display = 'none';
-  const resEl = document.getElementById('results');
-  resEl.style.display = 'block';
-  resEl.classList.add('fade-in');
-
-  const probs = Object.values(res.modelProbs);
-  const avgModelProb = probs.reduce((a, b) => a + b, 0) / probs.length;
-  const modelPct = Math.round(avgModelProb * 100);
-
-  const isHighRisk = modelPct >= 60;
-  const isMedRisk  = modelPct >= 30 && modelPct < 60;
-
-  // Risk bar
-  document.getElementById('riskPct').textContent = modelPct + '%';
-  document.getElementById('riskPct').style.color = isHighRisk ? 'var(--danger)' : isMedRisk ? 'var(--warn)' : 'var(--safe)';
-  const bar = document.getElementById('riskBar');
-  bar.style.width = modelPct + '%';
-  bar.style.background = isHighRisk
-    ? 'linear-gradient(90deg, #fc8181, #feb2b2)'
-    : isMedRisk
-    ? 'linear-gradient(90deg, #f6ad55, #fbd38d)'
-    : 'linear-gradient(90deg, #68d391, #9ae6b4)';
-
-  // Scores
-  document.getElementById('ifScore').textContent    = res.IF_Score.toFixed(3);
-  document.getElementById('statScore').textContent  = res.StatScore.toFixed(3);
-  document.getElementById('finalScore').textContent = res.FinalScore.toFixed(3);
-  document.getElementById('finalScore').style.color = isHighRisk ? 'var(--danger)' : isMedRisk ? 'var(--warn)' : 'var(--accent2)';
-
-  // Verdict
-  const banner = document.getElementById('verdictBanner');
-  if (isHighRisk) {
-    banner.style.background = 'var(--danger-bg)';
-    banner.style.border = '1px solid rgba(252,129,129,0.3)';
-    document.getElementById('verdictIcon').textContent = '🚨';
-    document.getElementById('verdictTitle').textContent = 'HIGH FRAUD RISK';
-    document.getElementById('verdictTitle').style.color = 'var(--danger)';
-    document.getElementById('verdictSub').textContent =
-  'High fraud probability based on ensemble model predictions';
-  } else if (isMedRisk) {
-    banner.style.background = 'var(--warn-bg)';
-    banner.style.border = '1px solid rgba(246,173,85,0.3)';
-    document.getElementById('verdictIcon').textContent = '⚠️';
-    document.getElementById('verdictTitle').textContent = 'ELEVATED RISK';
-    document.getElementById('verdictTitle').style.color = 'var(--warn)';
-    document.getElementById('verdictSub').textContent =
-  'Moderate fraud probability — flagged by some models';
-  } else {
-    banner.style.background = 'var(--safe-bg)';
-    banner.style.border = '1px solid rgba(104,211,145,0.3)';
-    document.getElementById('verdictIcon').textContent = '✅';
-    document.getElementById('verdictTitle').textContent = 'LIKELY NORMAL';
-    document.getElementById('verdictTitle').style.color = 'var(--safe)';
-   document.getElementById('verdictSub').textContent =
-  'Low fraud probability based on model predictions';
-  }
-
-  // Model votes
-  const votesEl = document.getElementById('modelVotes');
-  votesEl.innerHTML = '';
-  let fraudVotes = 0;
-  for (const [name, prob] of Object.entries(res.modelProbs)) {
-    const pred = prob >= 0.5 ? 1 : 0;
-    if (pred) fraudVotes++;
-    const div = document.createElement('div');
-    div.className = 'model-card';
-    div.style.borderColor = pred ? 'rgba(252,129,129,0.3)' : 'rgba(104,211,145,0.2)';
-    div.innerHTML = `
+        // Model votes
+        const votesEl = document.getElementById("modelVotes");
+        votesEl.innerHTML = "";
+        let fraudVotes = 0;
+        for (const [name, prob] of Object.entries(res.modelProbs)) {
+          const pred = prob >= 0.5 ? 1 : 0;
+          if (pred) fraudVotes++;
+          const div = document.createElement("div");
+          div.className = "model-card";
+          div.style.borderColor = pred
+            ? "rgba(252,129,129,0.3)"
+            : "rgba(104,211,145,0.2)";
+          div.innerHTML = `
       <div class="model-name">${name}</div>
-      <div class="model-verdict" style="color:${pred ? 'var(--danger)' : 'var(--safe)'}">${pred ? 'FRAUD' : 'NORMAL'}</div>
-      <div class="model-prob">${(prob*100).toFixed(1)}%</div>
+      <div class="model-verdict" style="color:${pred ? "var(--danger)" : "var(--safe)"}">${pred ? "FRAUD" : "NORMAL"}</div>
+      <div class="model-prob">${(prob * 100).toFixed(1)}%</div>
     `;
-    votesEl.appendChild(div);
-  }
-  document.getElementById('consensusNote').textContent =
-    `${modelPct}% avg fraud probability · ${fraudVotes}/5 models flagged fraud`;
+          votesEl.appendChild(div);
+        }
+        document.getElementById("consensusNote").textContent =
+          `${fraudVotes}/${Object.keys(res.modelProbs).length} models flagged fraud`;
 
-  // Z-scores
-  const zEl = document.getElementById('zscoreRows');
-  zEl.innerHTML = '';
-  for (const [feat, z] of Object.entries(res.zscores)) {
-    const abs = Math.abs(z);
-    const color = abs > 3 ? 'var(--danger)' : abs > 2 ? 'var(--warn)' : 'var(--accent)';
-    const alert = abs > 3 ? ' 🚨' : abs > 2 ? ' ⚠' : '';
-    const pct50 = Math.min(abs / 6, 1) * 50;
-    const left   = z >= 0 ? '50%' : `${50 - pct50}%`;
-    const width  = pct50 + '%';
+        // Z-scores
+        const zEl = document.getElementById("zscoreRows");
+        zEl.innerHTML = "";
+        for (const [feat, z] of Object.entries(res.zscores)) {
+          const abs = Math.abs(z);
+          const color =
+            abs > 3
+              ? "var(--danger)"
+              : abs > 2
+                ? "var(--warn)"
+                : "var(--accent)";
+          const alert = abs > 3 ? " 🚨" : abs > 2 ? " ⚠" : "";
+          const pct50 = Math.min(abs / 6, 1) * 50;
+          const left = z >= 0 ? "50%" : `${50 - pct50}%`;
+          const width = pct50 + "%";
 
-    const row = document.createElement('div');
-    row.className = 'zscore-row';
-    row.innerHTML = `
+          const row = document.createElement("div");
+          row.className = "zscore-row";
+          row.innerHTML = `
       <div class="zscore-label">${feat}</div>
       <div class="zscore-bar-wrap">
         <div class="zscore-center"></div>
@@ -1139,22 +1281,23 @@ function renderResults(res) {
       </div>
       <div class="zscore-val" style="color:${color}">${z.toFixed(2)}${alert}</div>
     `;
-    zEl.appendChild(row);
-  }
+          zEl.appendChild(row);
+        }
 
-  // Derived features
-  const fEl = document.getElementById('featureRows');
-  fEl.innerHTML = '';
-  for (const [k, v] of Object.entries(res.derivedFeatures)) {
-    const row = document.createElement('div');
-    row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);';
-    row.innerHTML = `
+        // Derived features
+        const fEl = document.getElementById("featureRows");
+        fEl.innerHTML = "";
+        for (const [k, v] of Object.entries(res.derivedFeatures)) {
+          const row = document.createElement("div");
+          row.style.cssText =
+            "display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);";
+          row.innerHTML = `
       <span style="font-size:12px;font-family:var(--mono);color:var(--text2);">${k}</span>
       <span style="font-size:12px;font-family:var(--mono);color:var(--accent);">${v}</span>
     `;
-    fEl.appendChild(row);
-  }
-}
-</script>
-</body>
+          fEl.appendChild(row);
+        }
+      }
+    </script>
+  </body>
 </html>
