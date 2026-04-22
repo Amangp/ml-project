@@ -20,11 +20,8 @@ def run_knn():
 
     # Scaling is mandatory for KNN — at prediction time it measures Euclidean distance
     # from each new point to every training point, so unscaled features break it entirely
-    # IF_Score, StatScore, TempScore are anomaly signals from MF-UFS
-    # from_scam and to_scam are direct fraud signals from the original dataset
     features = [
         "Value_z", "GasCost_z", "GasEfficiency_z", "TimeGap_z", "BlockGap_z",
-        "IF_Score", "StatScore", "TempScore",
         "value_ratio", "gas_efficiency", "is_high_value",
         "from_scam", "to_scam"
     ]
