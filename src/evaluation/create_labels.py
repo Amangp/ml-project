@@ -23,8 +23,6 @@ keep_cols = [
     "TempScore",
     "FinalScore",
     "FraudFlag",
-    "from_scam",
-    "to_scam",
     "label",
 ]
 
