@@ -21,11 +21,11 @@ def run_svm():
     # Z-scored base features are mandatory for SVM
     # RBF kernel computes distances in feature space, so unscaled features
     # where Value is in millions completely drown out everything else
-    # IF_Score, StatScore, TempScore are anomaly signals from MF-UFS
-    # from_scam and to_scam are direct fraud signals from the original dataset
+    # We deliberately exclude IF_Score, StatScore, and TempScore here
+    # Those three scores directly compute FinalScore which creates the label
+    # The supervised model must learn from raw features independently
     features = [
         "Value_z", "GasCost_z", "GasEfficiency_z", "TimeGap_z", "BlockGap_z",
-        "IF_Score", "StatScore", "TempScore",
         "value_ratio", "gas_efficiency", "is_high_value",
         "from_scam", "to_scam"
     ]
@@ -50,8 +50,9 @@ def run_svm():
     X_train, y_train = smote.fit_resample(X_train, y_train)
 
     # RBF kernel handles non-linear fraud patterns well
-    # class_weight=balanced penalizes missing fraud more than false alarms
-    model = SVC(C=1, kernel="rbf", gamma="scale", class_weight="balanced", random_state=42)
+    # No class_weight here because SMOTE already balanced the training set to 50/50
+    # Using class_weight=balanced after SMOTE double-penalizes and hurts precision
+    model = SVC(C=1, kernel="rbf", gamma="scale", random_state=42)
     model.fit(X_train, y_train)
 
     preds = model.predict(X_test)
