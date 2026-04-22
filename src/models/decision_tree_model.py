@@ -29,7 +29,6 @@ def run_decision_tree():
     # from_scam and to_scam are direct fraud signals from the original dataset
     features = [
         "Value_z", "GasCost_z", "GasEfficiency_z", "TimeGap_z", "BlockGap_z",
-        "IF_Score", "StatScore", "TempScore",
         "value_ratio", "gas_efficiency", "is_high_value",
         "from_scam", "to_scam"
     ]
@@ -55,13 +54,15 @@ def run_decision_tree():
     # max_depth=8 prevents the tree from memorising SMOTE-augmented training data
     # min_samples controls ensure each split has enough data to be statistically meaningful
     # class_weight=balanced penalizes missing a fraud case more than a false alarm
+    # No class_weight here because SMOTE already balanced the training set to 50/50
+    # Using class_weight=balanced after SMOTE double-penalizes and hurts precision
     model = DecisionTreeClassifier(
         max_depth=8,
         min_samples_split=10,
         min_samples_leaf=5,
-        class_weight="balanced",
         random_state=42
     )
+    
     model.fit(X_train, y_train)
 
     preds = model.predict(X_test)
