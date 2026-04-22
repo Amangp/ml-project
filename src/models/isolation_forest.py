@@ -13,7 +13,7 @@ features = [
 
 X = df[features]
 
-model = IsolationForest(n_estimators=200, contamination=0.02, random_state=42)
+model = IsolationForest(n_estimators=200, contamination=0.15, random_state=42)
 model.fit(X)
 
 scores = model.decision_function(X)

@@ -16,7 +16,7 @@ df["StatScore"] = (
 # -----------------------------
 # TempScore
 # -----------------------------
-rolling_mean = df["Value"].rolling(20).mean().fillna(0)
+rolling_mean = df["Value"].rolling(20).mean()
 epsilon = 1e-9
 
 df["TempScore"] = abs(df["Value"] - rolling_mean) / (rolling_mean + epsilon)
