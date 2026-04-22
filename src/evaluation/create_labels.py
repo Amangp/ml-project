@@ -12,9 +12,6 @@ df_final = df[[
     "GasEfficiency_z",
     "TimeGap_z",
     "BlockGap_z",
-    "IF_Score",
-    "StatScore",
-    "TempScore",
     "FraudFlag"
 ]]
 

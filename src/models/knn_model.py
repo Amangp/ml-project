@@ -1,66 +1,94 @@
 def run_knn():
     import pandas as pd
+    import joblib
+    import os
     from sklearn.model_selection import train_test_split
     from sklearn.neighbors import KNeighborsClassifier
-    from sklearn.metrics import classification_report, confusion_matrix
+    from sklearn.metrics import (
+        classification_report,
+        confusion_matrix,
+        accuracy_score,
+        precision_score,
+        recall_score,
+        f1_score
+    )
     from sklearn.preprocessing import StandardScaler
     from imblearn.over_sampling import SMOTE
 
-    print("\n===== KNN (k=5, distance-weighted) =====")
+    print("\n===== KNN (Clean Version) =====")
 
-    # Clean 70k labeled dataset produced by create_labels.py
-    df = pd.read_csv("Data/labeled_data.csv")
+    # Load clean dataset
+    df = pd.read_csv("Data/new dataset/labeled_data.csv")
 
-    # Derived features computed here because they are model-specific
-    # value_ratio captures transaction value relative to its execution cost
-    # is_high_value flags transactions above the dataset average
-    df["value_ratio"] = df["Value"] / (df["GasCost"] + 1)
-    df["gas_efficiency"] = df["GasEfficiency"]
-    df["is_high_value"] = (df["Value"] > df["Value"].mean()).astype(int)
 
-    # Scaling is mandatory for KNN — at prediction time it measures Euclidean distance
-    # from each new point to every training point, so unscaled features break it entirely
     features = [
         "Value_z",
         "GasCost_z",
         "GasEfficiency_z",
         "TimeGap_z",
-        "BlockGap_z",
-        "value_ratio",
-        "gas_efficiency",
-        "is_high_value",
-        "from_scam",
-        "to_scam",
+        "BlockGap_z"
     ]
 
     X = df[features].fillna(0)
-    y = df["label"]
+    y = df["FraudFlag"]
 
-    # stratify=y preserves the 85/15 class ratio in both train and test splits
+    # -----------------------------
+    # TRAIN-TEST SPLIT
+    # -----------------------------
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42, stratify=y
+        X, y,
+        test_size=0.2,
+        random_state=42,
+        stratify=y
     )
 
-    # Scale BEFORE SMOTE — SMOTE internally uses its own k-NN search to generate
-    # synthetic points, so if data is unscaled, SMOTE's neighbour search is also broken
+    # -----------------------------
+    # SCALING (MANDATORY FOR KNN)
+    # -----------------------------
     scaler = StandardScaler()
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
 
-    # SMOTE after scaling so synthetic fraud samples are created in normalized space
-    smote = SMOTE(random_state=42)
+    # -----------------------------
+    # SMOTE (IMPORTANT)
+    # -----------------------------
+    smote = SMOTE(sampling_strategy=0.5, random_state=42)
     X_train, y_train = smote.fit_resample(X_train, y_train)
 
-    # weights=distance means closer neighbours vote more strongly than distant ones
-    # this is better than uniform for fraud detection where very close matches are strong evidence
-    model = KNeighborsClassifier(n_neighbors=5, weights="distance")
+    # -----------------------------
+    # MODEL
+    # -----------------------------
+    model = KNeighborsClassifier(
+        n_neighbors=5,
+        weights="distance"
+    )
+
     model.fit(X_train, y_train)
 
     preds = model.predict(X_test)
-    print("\nConfusion Matrix:")
+
+    # -----------------------------
+    # REPORT
+    # -----------------------------
+    print("\n Accuracy:", accuracy_score(y_test, preds))
+    print("\n Precision:", precision_score(y_test, preds))
+    print(" Recall   :", recall_score(y_test, preds))
+    print(" F1 Score :", f1_score(y_test, preds))
+
+    print("\n Confusion Matrix:")
     print(confusion_matrix(y_test, preds))
-    print("\nClassification Report:")
+
+    print("\n Classification Report:")
     print(classification_report(y_test, preds))
+
+    # -----------------------------
+    # SAVE MODEL + SCALER
+    # -----------------------------
+    os.makedirs("Models", exist_ok=True)
+    joblib.dump(model, "Models/knn.pkl")
+    joblib.dump(scaler, "Models/knn_scaler.pkl")
+
+    print("\n Model + Scaler saved")
 
 
 if __name__ == "__main__":

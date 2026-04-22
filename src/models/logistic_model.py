@@ -17,21 +17,21 @@ def run_logistic():
 
     print("\n===== LOGISTIC REGRESSION =====")
 
-    # -----------------------------
-    # LOAD DATA
-    # -----------------------------
     df = pd.read_csv("Data/new dataset/labeled_data.csv")
 
+    # -----------------------------
+    # FEATURES (UPDATED)
+    # -----------------------------
     features = [
         "Value_z",
         "GasCost_z",
         "GasEfficiency_z",
         "TimeGap_z",
-        "BlockGap_z"
+        "BlockGap_z",
     ]
 
     X = df[features].fillna(0)
-    y = df["label"]
+    y = df["FraudFlag"]
 
     # -----------------------------
     # TRAIN-TEST SPLIT
@@ -51,7 +51,7 @@ def run_logistic():
     X_test = scaler.transform(X_test)
 
     # -----------------------------
-    # HANDLE IMBALANCE (IMPORTANT)
+    # SMOTE
     # -----------------------------
     smote = SMOTE(random_state=42)
     X_train, y_train = smote.fit_resample(X_train, y_train)
@@ -62,14 +62,16 @@ def run_logistic():
     model = LogisticRegression(max_iter=1000, random_state=42)
     model.fit(X_train, y_train)
 
-    # -----------------------------
-    # PREDICTION
-    # -----------------------------
     preds = model.predict(X_test)
 
     # -----------------------------
-    # FULL REPORT
+    # REPORT
     # -----------------------------
+    print("\n Accuracy:", accuracy_score(y_test, preds))
+    print("\n Precision:", precision_score(y_test, preds))
+    print(" Recall   :", recall_score(y_test, preds))
+    print(" F1 Score :", f1_score(y_test, preds))
+
     print("\n Confusion Matrix:")
     print(confusion_matrix(y_test, preds))
 
@@ -77,14 +79,13 @@ def run_logistic():
     print(classification_report(y_test, preds))
 
     # -----------------------------
-    # SAVE MODEL + SCALER (FOR UI)
+    # SAVE MODEL
     # -----------------------------
     os.makedirs("Models", exist_ok=True)
-
     joblib.dump(model, "Models/logistic.pkl")
     joblib.dump(scaler, "Models/logistic_scaler.pkl")
 
-    print("\n Model + Scaler saved (ready for UI)")
+    print("\n Model + Scaler saved")
 
 
 if __name__ == "__main__":
