@@ -17,12 +17,12 @@ def run_logistic():
     df["gas_efficiency"] = df["GasEfficiency"]
     df["is_high_value"]  = (df["Value"] > df["Value"].mean()).astype(int)
 
-    # Z-scored base features keep all inputs on the same scale
-    # IF_Score, StatScore, TempScore are anomaly signals from MF-UFS
-    # from_scam and to_scam are direct fraud signals from the original dataset
+    # We exclude IF_Score, StatScore, and TempScore as they are directly used to compute FinalScore which creates the label
+    # FinalScore = 0.3*IF_Score + 0.4*StatScore + 0.3*TempScore, label = FinalScore > 85th percentile
+    # Including them would mean the model is just learning to reconstruct that formula
+    # not learning actual fraud patterns from the raw transaction features
     features = [
         "Value_z", "GasCost_z", "GasEfficiency_z", "TimeGap_z", "BlockGap_z",
-        "IF_Score", "StatScore", "TempScore",
         "value_ratio", "gas_efficiency", "is_high_value",
         "from_scam", "to_scam"
     ]
@@ -46,8 +46,10 @@ def run_logistic():
     smote = SMOTE(random_state=42)
     X_train, y_train = smote.fit_resample(X_train, y_train)
 
-    # class_weight=balanced; penalizes missing a fraud case more than a false alarm
-    model = LogisticRegression(class_weight="balanced", max_iter=1000, random_state=42)
+    # No class_weight here because SMOTE already balanced the training set to 50/50
+    # Using class_weight=balanced on top of SMOTE double-penalizes the majority class
+    # which inflates recall but hurts precision — one correction is enough
+    model = LogisticRegression(max_iter=1000, random_state=42)
     model.fit(X_train, y_train)
 
     preds = model.predict(X_test)
