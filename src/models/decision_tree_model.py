@@ -113,6 +113,7 @@ def run_decision_tree():
     )
     plt.tight_layout()
     plt.savefig("Models/decision_tree_plot.png", dpi=150)
+    plt.show()
     plt.close()
 
     print("\nModel saved")
